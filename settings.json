@@ -1,0 +1,11 @@
+{
+  "youtube_api_key": "",
+  "deepseek_api_key": "",
+  "min_views": 300000,
+  "period_days": 30,
+  "max_results": 25,
+  "channel_videos": 40,
+  "keywords": [],
+  "overseas_keywords": [],
+  "overseas_countries": ["US", "GB", "JP"]
+}
