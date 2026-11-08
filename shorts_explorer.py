@@ -1123,15 +1123,45 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self)
         form = QFormLayout()
 
+        # YouTube API 키 + 유효성 검사 버튼
+        yt_row = QHBoxLayout()
         self.yt_key_edit = QLineEdit(self.settings.get('youtube_api_key', ''))
         self.yt_key_edit.setEchoMode(QLineEdit.Password)
         self.yt_key_edit.setPlaceholderText("YouTube Data API v3 키")
-        form.addRow("YouTube API 키:", self.yt_key_edit)
+        yt_row.addWidget(self.yt_key_edit)
+        self.yt_show_btn = QPushButton("👁")
+        self.yt_show_btn.setFixedWidth(30)
+        self.yt_show_btn.setCheckable(True)
+        self.yt_show_btn.toggled.connect(
+            lambda on: self.yt_key_edit.setEchoMode(QLineEdit.Normal if on else QLineEdit.Password))
+        yt_row.addWidget(self.yt_show_btn)
+        self.yt_check_btn = QPushButton("유효성 확인")
+        self.yt_check_btn.setFixedWidth(90)
+        self.yt_check_btn.clicked.connect(self._check_yt_key)
+        yt_row.addWidget(self.yt_check_btn)
+        self.yt_status_label = QLabel("")
+        yt_row.addWidget(self.yt_status_label)
+        form.addRow("YouTube API 키:", yt_row)
 
+        # DeepSeek API 키 + 유효성 검사 버튼
+        ds_row = QHBoxLayout()
         self.ds_key_edit = QLineEdit(self.settings.get('deepseek_api_key', ''))
         self.ds_key_edit.setEchoMode(QLineEdit.Password)
         self.ds_key_edit.setPlaceholderText("DeepSeek API 키")
-        form.addRow("DeepSeek API 키:", self.ds_key_edit)
+        ds_row.addWidget(self.ds_key_edit)
+        self.ds_show_btn = QPushButton("👁")
+        self.ds_show_btn.setFixedWidth(30)
+        self.ds_show_btn.setCheckable(True)
+        self.ds_show_btn.toggled.connect(
+            lambda on: self.ds_key_edit.setEchoMode(QLineEdit.Normal if on else QLineEdit.Password))
+        ds_row.addWidget(self.ds_show_btn)
+        self.ds_check_btn = QPushButton("유효성 확인")
+        self.ds_check_btn.setFixedWidth(90)
+        self.ds_check_btn.clicked.connect(self._check_ds_key)
+        ds_row.addWidget(self.ds_check_btn)
+        self.ds_status_label = QLabel("")
+        ds_row.addWidget(self.ds_status_label)
+        form.addRow("DeepSeek API 키:", ds_row)
 
         self.min_views_spin = QSpinBox()
         self.min_views_spin.setRange(0, 100000000)
@@ -1163,6 +1193,73 @@ class SettingsDialog(QDialog):
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def _check_yt_key(self):
+        key = self.yt_key_edit.text().strip()
+        if not key:
+            self.yt_status_label.setText("❌ 키 없음")
+            self.yt_status_label.setStyleSheet("color: red;")
+            return
+        self.yt_check_btn.setEnabled(False)
+        self.yt_status_label.setText("확인 중...")
+        try:
+            resp = requests.get(
+                "https://www.googleapis.com/youtube/v3/videos",
+                params={"part": "snippet", "id": "dQw4w9WgXcQ", "key": key},
+                timeout=10
+            )
+            if resp.status_code == 200:
+                self.yt_status_label.setText("✅ 유효")
+                self.yt_status_label.setStyleSheet("color: #00e676;")
+            elif resp.status_code == 400:
+                self.yt_status_label.setText("❌ 키 오류")
+                self.yt_status_label.setStyleSheet("color: red;")
+            elif resp.status_code == 403:
+                self.yt_status_label.setText("❌ 권한 없음 (API 미활성화)")
+                self.yt_status_label.setStyleSheet("color: orange;")
+            else:
+                self.yt_status_label.setText(f"❌ 오류 {resp.status_code}")
+                self.yt_status_label.setStyleSheet("color: red;")
+        except Exception as e:
+            self.yt_status_label.setText("❌ 네트워크 오류")
+            self.yt_status_label.setStyleSheet("color: red;")
+        finally:
+            self.yt_check_btn.setEnabled(True)
+
+    def _check_ds_key(self):
+        key = self.ds_key_edit.text().strip()
+        if not key:
+            self.ds_status_label.setText("❌ 키 없음")
+            self.ds_status_label.setStyleSheet("color: red;")
+            return
+        self.ds_check_btn.setEnabled(False)
+        self.ds_status_label.setText("확인 중...")
+        try:
+            resp = requests.post(
+                "https://api.deepseek.com/chat/completions",
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                json={"model": "deepseek-chat",
+                      "messages": [{"role": "user", "content": "hi"}],
+                      "max_tokens": 1},
+                timeout=15
+            )
+            if resp.status_code == 200:
+                self.ds_status_label.setText("✅ 유효")
+                self.ds_status_label.setStyleSheet("color: #00e676;")
+            elif resp.status_code == 401:
+                self.ds_status_label.setText("❌ 인증 실패")
+                self.ds_status_label.setStyleSheet("color: red;")
+            elif resp.status_code == 402:
+                self.ds_status_label.setText("⚠️ 크레딧 부족")
+                self.ds_status_label.setStyleSheet("color: orange;")
+            else:
+                self.ds_status_label.setText(f"❌ 오류 {resp.status_code}")
+                self.ds_status_label.setStyleSheet("color: red;")
+        except Exception as e:
+            self.ds_status_label.setText("❌ 네트워크 오류")
+            self.ds_status_label.setStyleSheet("color: red;")
+        finally:
+            self.ds_check_btn.setEnabled(True)
 
     def get_settings(self):
         self.settings['youtube_api_key'] = self.yt_key_edit.text().strip()
@@ -1315,7 +1412,20 @@ class SearchTab(QWidget):
         self.result_table.setColumnWidth(0, 30)
         self.result_table.setColumnWidth(1, 0)   # 숨김
         self.result_table.setColumnHidden(1, True)
+        # 제목 더블클릭 → 유튜브 영상 열기
+        self.result_table.cellDoubleClicked.connect(self._on_cell_double_clicked)
         layout.addWidget(self.result_table)
+
+    def _on_cell_double_clicked(self, row, col):
+        """제목 셀 더블클릭 시 유튜브 영상 열기"""
+        if row < len(self.current_videos):
+            vid = self.current_videos[row]
+            url = vid.get('url', '')
+            if not url:
+                video_id = vid.get('video_id', '')
+                url = f"https://www.youtube.com/watch?v={video_id}" if video_id else ''
+            if url:
+                webbrowser.open(url)
 
     def get_period(self):
         if self.period_all.isChecked():
@@ -1503,8 +1613,13 @@ class SearchTab(QWidget):
         if not checked:
             QMessageBox.information(self, "선택 필요", "분석할 영상을 체크박스로 선택하세요.")
             return
-        # 분석 탭으로 이동은 메인 윈도우가 처리
-        self.parentWidget().parentWidget().switch_to_analysis(checked)
+        # 분석 탭으로 이동 — 메인 윈도우(QMainWindow)를 안전하게 탐색
+        widget = self.parentWidget()
+        while widget is not None:
+            if isinstance(widget, QMainWindow):
+                widget.switch_to_analysis(checked)
+                break
+            widget = widget.parentWidget()
 
     def reload_settings(self):
         self.settings = load_settings()
