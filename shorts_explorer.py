@@ -1124,7 +1124,9 @@ class SettingsDialog(QDialog):
         form = QFormLayout()
 
         # YouTube API 키 + 유효성 검사 버튼
-        yt_row = QHBoxLayout()
+        yt_widget = QWidget()
+        yt_row = QHBoxLayout(yt_widget)
+        yt_row.setContentsMargins(0, 0, 0, 0)
         self.yt_key_edit = QLineEdit(self.settings.get('youtube_api_key', ''))
         self.yt_key_edit.setEchoMode(QLineEdit.Password)
         self.yt_key_edit.setPlaceholderText("YouTube Data API v3 키")
@@ -1139,12 +1141,15 @@ class SettingsDialog(QDialog):
         self.yt_check_btn.setFixedWidth(90)
         self.yt_check_btn.clicked.connect(self._check_yt_key)
         yt_row.addWidget(self.yt_check_btn)
-        self.yt_status_label = QLabel("")
+        self.yt_status_label = QLabel("　")
+        self.yt_status_label.setFixedWidth(120)
         yt_row.addWidget(self.yt_status_label)
-        form.addRow("YouTube API 키:", yt_row)
+        form.addRow("YouTube API 키:", yt_widget)
 
         # DeepSeek API 키 + 유효성 검사 버튼
-        ds_row = QHBoxLayout()
+        ds_widget = QWidget()
+        ds_row = QHBoxLayout(ds_widget)
+        ds_row.setContentsMargins(0, 0, 0, 0)
         self.ds_key_edit = QLineEdit(self.settings.get('deepseek_api_key', ''))
         self.ds_key_edit.setEchoMode(QLineEdit.Password)
         self.ds_key_edit.setPlaceholderText("DeepSeek API 키")
@@ -1159,9 +1164,10 @@ class SettingsDialog(QDialog):
         self.ds_check_btn.setFixedWidth(90)
         self.ds_check_btn.clicked.connect(self._check_ds_key)
         ds_row.addWidget(self.ds_check_btn)
-        self.ds_status_label = QLabel("")
+        self.ds_status_label = QLabel("　")
+        self.ds_status_label.setFixedWidth(120)
         ds_row.addWidget(self.ds_status_label)
-        form.addRow("DeepSeek API 키:", ds_row)
+        form.addRow("DeepSeek API 키:", ds_widget)
 
         self.min_views_spin = QSpinBox()
         self.min_views_spin.setRange(0, 100000000)
